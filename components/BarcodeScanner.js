@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
 import Quagga from 'quagga';
 
+import VideoPlayer from '@/components/VideoPlayer';
+
 const BarcodeScanner = ({ result, setResult }) => {
     const [stream, setStream] = useState(null);
 
     useEffect(() => {
 
-        navigator.mediaDevices
-            .getUserMedia({ video: { facingMode: 'environment' } })
-            .then((stream) => {
+        const getStream = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                });
                 setStream(stream);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        getStream();
 
         Quagga.init({
             inputStream: {
@@ -25,9 +31,9 @@ const BarcodeScanner = ({ result, setResult }) => {
                 readers: ["ean_reader"] // Barcode format to detect
             },
             locate: true, // Enable locate
-        }, function (err) {
-            if (err) {
-                console.error(err);
+        }, (error) => {
+            if (error) {
+                console.error(error);
                 return;
             }
             Quagga.start();
@@ -39,47 +45,12 @@ const BarcodeScanner = ({ result, setResult }) => {
 
     }, []);
 
-    useEffect(() => {
-        if (stream) {
-            const options = {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    width: stream.getTracks()[0].getSettings().width,
-                    height: stream.getTracks()[0].getSettings().height,
-                }),
-            };
 
-            fetch('/api/media', options)
-                .then((res) => res.json())
-                .then((data) => {
-                    setResult(data.result);
-                })
-                .catch((err) => {
-                    console.error(err);
-                });
-
-        }
-    }, [stream]);
 
     return (
         <div>
-            <video
-                ref={(video) => {
-                    if (video && stream) {
-                        video.srcObject = stream;
-                    }
-                }}
-                autoPlay
-                playsInline
-                muted
-                id="video"
-                style={{ width: '100%', maxWidth: '400px', maxHeight: '400px' }}
-            />
+            <VideoPlayer  {...{ stream }} />
             {result && <p>Résultat: {result}</p>}
-
         </div>
     );
 };
